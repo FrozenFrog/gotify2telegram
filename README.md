@@ -5,30 +5,51 @@ This Gotify plugin forwards received messages to Telegram and/or Discord.
 - A Telegram bot, bot token, and chat ID from bot conversation. You can get that information by following this [blog](https://medium.com/linux-shots/setup-telegram-bot-to-get-alert-notifications-90be7da4444).
 - Golang, Docker, wget (If you want to build the binary from source).
 
+## Compatibility
+
+Gotify plugins are Go plugins, so a `.so` file only loads on **the exact Gotify version it was built for** (same Go version and same dependency versions). Loading a mismatched plugin makes Gotify exit on startup with an error like `plugin was built with a different version of package ...`.
+
+Prebuilt plugins are available for Gotify `2.5.0`, `2.6.1`, `2.7.3`, `2.8.0`, `2.9.1`, `3.0.0` and `3.1.1`. The Gotify version is part of the file name, e.g. `telegram-plugin-linux-amd64-v3.1.1.so`.
+
+> [!IMPORTANT]
+> Pin the Gotify image to a specific version (e.g. `gotify/server:3.1.1`), not `latest`. If you use automatic image updates (Watchtower, Komodo `auto_update`, ...), a new Gotify release will be pulled without a matching plugin and Gotify will fail to start.
+
 ## Installation
 * **By shared object**
 
-    1. Get the compatible shared object from [release](https://github.com/lekoOwO/gotify2telegram/releases).
+    1. Get the shared object matching your Gotify version and architecture from [release](https://github.com/lekoOwO/gotify2telegram/releases).
 
-    2. Put it into Gotify plugin folder.
+    2. Put it into Gotify plugin folder (`data/plugins` by default). Keep only one version of this plugin in the folder.
 
-    3. Set secrets via environment variables (List of mandatory secrets is in [Appendix](#appendix)).
+    3. Restart gotify.
 
-    4. Restart gotify.
-
-    5. Config the plugin.
+    4. Config the plugin in the Gotify web UI (Plugins tab), see [Configuration](#configuration).
 
 * **Build from source**
 
-    1. Change GOTIFY_VERSION in Makefile.
-
-    2. Build the binary.
+    1. Build the binary for your Gotify version. This updates `go.mod` to the dependency versions of that Gotify release and builds inside the official `gotify/build` Docker image.
 
     ```
-    make build
+    GOTIFY_VERSION=3.1.1 make build
     ```
 
-    3. Follow instructions from step 2 in the shared object installation.
+    Use `make build-linux-amd64` (or `build-linux-arm64`, `build-linux-arm-7`) to build a single architecture.
+
+    2. Follow instructions from step 2 in the shared object installation.
+
+## Upgrading Gotify
+
+1. Back up your Gotify `data` folder (at least `gotify.db` and `plugins`).
+2. Get or build the plugin for the new Gotify version.
+3. Stop Gotify, replace the old `.so` in the plugin folder with the new one, change the image tag to the new version and start Gotify.
+
+The plugin configuration and enabled state are stored in the Gotify database and keyed by the plugin's module path, so they are kept across upgrades. Existing application and client tokens keep working; you do not need to recreate them.
+
+### Upgrading to Gotify 3.x
+
+- `config.yml` is no longer read by Gotify 3. Convert any non-default settings to environment variables, see the [migration guide](https://gotify.net/docs/migrate-to-3). The plugin configuration is not affected, it lives in the database.
+- Tokens are not shown again in the Gotify UI after creation. Keep the client token used in the plugin's `token` setting, or create a new client if you need a new one.
+- Gotify 3 can delete clients after a period of inactivity. Existing clients never expire by default; if you create a new client for this plugin, leave its inactivity expiry at `0` (never).
 
 ## Configuration
 
@@ -77,7 +98,11 @@ The `gotify_host` configuration key should be set to `ws://YOUR_GOTIFY_IP` (depe
 The `token` configuration key should be set to a valid token that can be created in the "Clients" tab.
 
 ## Troubleshooting
-1. When only the Gotify dashboard receives your message, but not Telegram:
+1. Gotify exits on startup after loading the plugin, with `plugin was built with a different version of package ...`:
+
+    The plugin does not match your Gotify version. Use the `.so` built for your exact Gotify version (see [Compatibility](#compatibility)) and make sure no older version of the plugin is left in the plugin folder.
+
+2. When only the Gotify dashboard receives your message, but not Telegram:
 
     If, when making the API call to get your bot's chat ID, no data is returned, you may need to change the bot's privacy settings.
 
