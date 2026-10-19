@@ -39,7 +39,10 @@ jobs:
           path: build/*.so
   release:
     name: Release Plugin
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     needs: build
     steps:
       - name: Checkout Code
