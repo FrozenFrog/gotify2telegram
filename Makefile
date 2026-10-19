@@ -17,6 +17,9 @@ update-go-mod: create-build-dir
 	GOTIFY_COMMIT=$(shell curl -s https://api.github.com/repos/gotify/server/git/ref/tags/v${GOTIFY_VERSION} | jq -r '.object.sha') && \
 	wget -O ${BUILDDIR}/gotify-server.mod https://raw.githubusercontent.com/gotify/server/$${GOTIFY_COMMIT}/go.mod
 	go run github.com/gotify/plugin-api/cmd/gomod-cap -from ${BUILDDIR}/gotify-server.mod -to go.mod
+	# gomod-cap only caps requirements; also match the server's go directive so
+	# the build image for that gotify version accepts go.mod.
+	go mod edit -go=$$(awk '$$1 == "go" { print $$2 }' ${BUILDDIR}/gotify-server.mod) -toolchain=none
 	rm ${BUILDDIR}/gotify-server.mod || true
 	go mod tidy
 

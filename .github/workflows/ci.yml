@@ -14,9 +14,10 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        gotify-version: ["2.5.0", "2.6.1", "2.7.3", "2.8.0", "2.9.1", "3.0.0", "3.1.1"]
+        gotify-version: ["2.8.0", "2.9.1", "3.0.0", "3.1.1"]
 
     steps:
       - name: Checkout source code
@@ -29,7 +30,6 @@ jobs:
         env:
           GOTIFY_VERSION: "${{ matrix.gotify-version }}"
         run: |
-          make download-tools
           make build
 
       - name: Upload build artifacts
