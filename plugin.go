@@ -42,10 +42,6 @@ func (p *Plugin) connect_websocket(url string) {
 		debug("connect_websocket:: Connecting ws.")
 		ws, _, err := websocket.DefaultDialer.Dial(url, nil)
 		if err == nil {
-			ws.SetCloseHandler(func(code int, text string) error {
-				p.ws = nil
-				return fmt.Errorf("WebSocket Connection Closed. Resetting plugin.ws.")
-			})
 			p.ws = ws
 
 			// Get Local Port
@@ -83,7 +79,10 @@ func (p *Plugin) get_websocket_msg(url string) {
 		err := p.ws.ReadJSON(msg)
 		if err != nil {
 			fmt.Printf("Error while reading WebSocket: %v\n", err)
+			// Drop the connection so the next iteration reconnects instead of
+			// reading from a closed connection forever.
 			p.ws.Close()
+			p.ws = nil
 			continue
 		}
 
